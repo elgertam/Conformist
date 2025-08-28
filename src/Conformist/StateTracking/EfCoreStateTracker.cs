@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
@@ -12,24 +13,29 @@ namespace Conformist.HttpRfc.StateTracking;
 
 public class EfCoreStateTracker<TContext> where TContext : DbContext
 {
-    private readonly TContext _context;
+    private readonly IServiceProvider _serviceProvider;
     private readonly StateTrackingOptions _options;
     private readonly ILogger<EfCoreStateTracker<TContext>> _logger;
     private readonly ConcurrentDictionary<string, Func<Task<int>>> _compiledCountQueries = new();
     private readonly ConcurrentDictionary<string, Func<Task<string>>> _compiledChecksumQueries = new();
     private readonly List<IEntityType> _trackedEntityTypes;
 
-    public EfCoreStateTracker(TContext context, StateTrackingOptions options, ILogger<EfCoreStateTracker<TContext>> logger)
+    public EfCoreStateTracker(IServiceProvider serviceProvider, StateTrackingOptions options, ILogger<EfCoreStateTracker<TContext>> logger)
     {
-        _context = context;
+        _serviceProvider = serviceProvider;
         _options = options;
         _logger = logger;
-        _trackedEntityTypes = DiscoverEntityTypes();
         
-        if (_options.UseCompiledQueries)
-        {
-            InitializeCompiledQueries();
-        }
+        // Create a temporary context to discover entity types
+        using var scope = _serviceProvider.CreateScope();
+        using var context = scope.ServiceProvider.GetRequiredService<TContext>();
+        _trackedEntityTypes = DiscoverEntityTypes(context);
+        
+        // Compiled queries not supported with service provider pattern for now
+        // if (_options.UseCompiledQueries)
+        // {
+        //     InitializeCompiledQueries();
+        // }
     }
 
     public async Task<StateSnapshot> CaptureStateAsync(CancellationToken cancellationToken = default)
@@ -68,9 +74,9 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         };
     }
 
-    private List<IEntityType> DiscoverEntityTypes()
+    private List<IEntityType> DiscoverEntityTypes(TContext context)
     {
-        var model = _context.Model;
+        var model = context.Model;
         var entityTypes = model.GetEntityTypes()
             .Where(e => !e.IsOwned())
             .Where(e => _options.ShouldTrackEntity(e.Name))
@@ -123,7 +129,8 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         var lambda = Expression.Lambda<Func<TContext, Task<int>>>(countCall, contextParam);
         var compiled = lambda.Compile();
 
-        return () => compiled(_context);
+        // TODO: Fix this when re-enabling compiled queries
+        throw new NotImplementedException("Compiled queries disabled");
     }
 
     private Func<Task<string>> CreateCompiledChecksumQuery(IEntityType entityType)
@@ -139,11 +146,8 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
 
         return async () =>
         {
-            var dbSet = (IQueryable)dbSetProperty.GetValue(_context)!;
-            var entities = await EntityFrameworkQueryableExtensions.ToListAsync(
-                (IQueryable<object>)dbSet, CancellationToken.None);
-            
-            return ComputeChecksum(entities);
+            // TODO: Fix this when re-enabling compiled queries
+            throw new NotImplementedException("Compiled queries disabled");
         };
     }
 
@@ -153,28 +157,19 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         
         try
         {
+            using var scope = _serviceProvider.CreateScope();
+            using var context = scope.ServiceProvider.GetRequiredService<TContext>();
+            
             int count;
             string? checksum = null;
 
-            if (_options.UseCompiledQueries && _compiledCountQueries.TryGetValue(entityType.Name, out var compiledCountQuery))
-            {
-                count = await compiledCountQuery();
-            }
-            else
-            {
-                count = await GetEntityCountAsync(entityType, cancellationToken);
-            }
+            // Compiled queries disabled for now
+            count = await GetEntityCountAsync(entityType, context, cancellationToken);
 
             if (_options.TrackEntityChecksums)
             {
-                if (_options.UseCompiledQueries && _compiledChecksumQueries.TryGetValue(entityType.Name, out var compiledChecksumQuery))
-                {
-                    checksum = await compiledChecksumQuery();
-                }
-                else
-                {
-                    checksum = await GetEntityChecksumAsync(entityType, cancellationToken);
-                }
+                // Compiled queries disabled for now  
+                checksum = await GetEntityChecksumAsync(entityType, context, cancellationToken);
             }
 
             queryStopwatch.Stop();
@@ -196,7 +191,7 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         }
     }
 
-    private async Task<int> GetEntityCountAsync(IEntityType entityType, CancellationToken cancellationToken)
+    private async Task<int> GetEntityCountAsync(IEntityType entityType, TContext context, CancellationToken cancellationToken)
     {
         var clrType = entityType.ClrType;
         var dbSetProperty = typeof(TContext).GetProperties()
@@ -207,7 +202,7 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         if (dbSetProperty == null)
             return 0;
 
-        var dbSet = dbSetProperty.GetValue(_context);
+        var dbSet = dbSetProperty.GetValue(context);
         var countMethod = typeof(EntityFrameworkQueryableExtensions)
             .GetMethods()
             .First(m => m.Name == "CountAsync" && m.GetParameters().Length == 2)
@@ -217,7 +212,7 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         return await countTask;
     }
 
-    private async Task<string> GetEntityChecksumAsync(IEntityType entityType, CancellationToken cancellationToken)
+    private async Task<string> GetEntityChecksumAsync(IEntityType entityType, TContext context, CancellationToken cancellationToken)
     {
         var clrType = entityType.ClrType;
         var dbSetProperty = typeof(TContext).GetProperties()
@@ -228,7 +223,7 @@ public class EfCoreStateTracker<TContext> where TContext : DbContext
         if (dbSetProperty == null)
             return "";
 
-        var dbSet = (IQueryable)dbSetProperty.GetValue(_context)!;
+        var dbSet = (IQueryable)dbSetProperty.GetValue(context)!;
         var toListMethod = typeof(EntityFrameworkQueryableExtensions)
             .GetMethods()
             .First(m => m.Name == "ToListAsync" && m.GetParameters().Length == 2)

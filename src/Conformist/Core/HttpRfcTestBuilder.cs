@@ -83,8 +83,8 @@ public class HttpRfcTestBuilder<TContext, TProgram> where TContext : DbContext w
     {
         _excludedBuiltInProperties.AddRange(new[]
         {
-            typeof(PutMethodIdempotencyProperty<TContext>),
-            typeof(DeleteMethodIdempotencyProperty<TContext>)
+            typeof(PutMethodIdempotencyProperty<TContext, TProgram>),
+            typeof(DeleteMethodIdempotencyProperty<TContext, TProgram>)
         });
         return this;
     }
@@ -93,7 +93,7 @@ public class HttpRfcTestBuilder<TContext, TProgram> where TContext : DbContext w
     {
         _excludedBuiltInProperties.AddRange(new[]
         {
-            typeof(HeadGetConsistencyProperty<TContext>),
+            typeof(HeadGetConsistencyProperty<TContext, TProgram>),
             typeof(OptionsAllowHeaderProperty<TContext>),
             typeof(MethodNotAllowedProperty<TContext>)
         });
@@ -179,29 +179,29 @@ public class HttpRfcTestBuilder<TContext, TProgram> where TContext : DbContext w
                 loggerFactory.CreateLogger<OptionsMethodSafetyProperty<TContext>>()));
         }
 
-        if (!IsExcluded<PutMethodIdempotencyProperty<TContext>>())
+        if (!IsExcluded<PutMethodIdempotencyProperty<TContext, TProgram>>())
         {
             var stateTracker = CreateStateTracker(serviceProvider, loggerFactory);
-            properties.Add(new PutMethodIdempotencyProperty<TContext>(
-                (WebApplicationFactory<object>)(object)_factory,
+            properties.Add(new PutMethodIdempotencyProperty<TContext, TProgram>(
+                _factory,
                 stateTracker, 
-                loggerFactory.CreateLogger<PutMethodIdempotencyProperty<TContext>>()));
+                loggerFactory.CreateLogger<PutMethodIdempotencyProperty<TContext, TProgram>>()));
         }
 
-        if (!IsExcluded<DeleteMethodIdempotencyProperty<TContext>>())
+        if (!IsExcluded<DeleteMethodIdempotencyProperty<TContext, TProgram>>())
         {
             var stateTracker = CreateStateTracker(serviceProvider, loggerFactory);
-            properties.Add(new DeleteMethodIdempotencyProperty<TContext>(
-                (WebApplicationFactory<object>)(object)_factory,
+            properties.Add(new DeleteMethodIdempotencyProperty<TContext, TProgram>(
+                _factory,
                 stateTracker, 
-                loggerFactory.CreateLogger<DeleteMethodIdempotencyProperty<TContext>>()));
+                loggerFactory.CreateLogger<DeleteMethodIdempotencyProperty<TContext, TProgram>>()));
         }
 
-        if (!IsExcluded<HeadGetConsistencyProperty<TContext>>())
+        if (!IsExcluded<HeadGetConsistencyProperty<TContext, TProgram>>())
         {
-            properties.Add(new HeadGetConsistencyProperty<TContext>(
-                (WebApplicationFactory<object>)(object)_factory,
-                loggerFactory.CreateLogger<HeadGetConsistencyProperty<TContext>>()));
+            properties.Add(new HeadGetConsistencyProperty<TContext, TProgram>(
+                _factory,
+                loggerFactory.CreateLogger<HeadGetConsistencyProperty<TContext, TProgram>>()));
         }
 
         if (!IsExcluded<OptionsAllowHeaderProperty<TContext>>())
@@ -223,9 +223,8 @@ public class HttpRfcTestBuilder<TContext, TProgram> where TContext : DbContext w
 
     private EfCoreStateTracker<TContext> CreateStateTracker(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
-        var context = serviceProvider.GetRequiredService<TContext>();
         return new EfCoreStateTracker<TContext>(
-            context, 
+            serviceProvider, 
             _stateTrackingOptions, 
             loggerFactory.CreateLogger<EfCoreStateTracker<TContext>>());
     }

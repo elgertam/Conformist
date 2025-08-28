@@ -7,16 +7,16 @@ using System.Net;
 
 namespace Conformist.HttpRfc.Properties;
 
-public class HeadGetConsistencyProperty<TContext> : IHttpProperty<TContext> where TContext : DbContext
+public class HeadGetConsistencyProperty<TContext, TProgram> : IHttpProperty<TContext> where TContext : DbContext where TProgram : class
 {
-    private readonly WebApplicationFactory<object> _factory;
-    private readonly ILogger<HeadGetConsistencyProperty<TContext>> _logger;
+    private readonly WebApplicationFactory<TProgram> _factory;
+    private readonly ILogger<HeadGetConsistencyProperty<TContext, TProgram>> _logger;
 
     public string Name => "HEAD-GET Response Consistency";
     public string Description => "HEAD responses must have the same headers as GET responses but without a body";
     public string RfcReference => "RFC 7231 Section 4.3.2";
 
-    public HeadGetConsistencyProperty(WebApplicationFactory<object> factory, ILogger<HeadGetConsistencyProperty<TContext>> logger)
+    public HeadGetConsistencyProperty(WebApplicationFactory<TProgram> factory, ILogger<HeadGetConsistencyProperty<TContext, TProgram>> logger)
     {
         _factory = factory;
         _logger = logger;

@@ -7,20 +7,20 @@ using System.Net;
 
 namespace Conformist.HttpRfc.Properties;
 
-public class PutMethodIdempotencyProperty<TContext> : IHttpProperty<TContext> where TContext : DbContext
+public class PutMethodIdempotencyProperty<TContext, TProgram> : IHttpProperty<TContext> where TContext : DbContext where TProgram : class
 {
-    private readonly WebApplicationFactory<object> _factory;
+    private readonly WebApplicationFactory<TProgram> _factory;
     private readonly EfCoreStateTracker<TContext> _stateTracker;
-    private readonly ILogger<PutMethodIdempotencyProperty<TContext>> _logger;
+    private readonly ILogger<PutMethodIdempotencyProperty<TContext, TProgram>> _logger;
 
     public string Name => "PUT Method Idempotency";
     public string Description => "Multiple identical PUT requests should have the same effect as a single request";
     public string RfcReference => "RFC 7231 Section 4.2.2";
 
     public PutMethodIdempotencyProperty(
-        WebApplicationFactory<object> factory,
+        WebApplicationFactory<TProgram> factory,
         EfCoreStateTracker<TContext> stateTracker, 
-        ILogger<PutMethodIdempotencyProperty<TContext>> logger)
+        ILogger<PutMethodIdempotencyProperty<TContext, TProgram>> logger)
     {
         _factory = factory;
         _stateTracker = stateTracker;
@@ -115,20 +115,20 @@ public class PutMethodIdempotencyProperty<TContext> : IHttpProperty<TContext> wh
     }
 }
 
-public class DeleteMethodIdempotencyProperty<TContext> : IHttpProperty<TContext> where TContext : DbContext
+public class DeleteMethodIdempotencyProperty<TContext, TProgram> : IHttpProperty<TContext> where TContext : DbContext where TProgram : class
 {
-    private readonly WebApplicationFactory<object> _factory;
+    private readonly WebApplicationFactory<TProgram> _factory;
     private readonly EfCoreStateTracker<TContext> _stateTracker;
-    private readonly ILogger<DeleteMethodIdempotencyProperty<TContext>> _logger;
+    private readonly ILogger<DeleteMethodIdempotencyProperty<TContext, TProgram>> _logger;
 
     public string Name => "DELETE Method Idempotency";
     public string Description => "Multiple identical DELETE requests should have the same effect as a single request";
     public string RfcReference => "RFC 7231 Section 4.2.2";
 
     public DeleteMethodIdempotencyProperty(
-        WebApplicationFactory<object> factory,
+        WebApplicationFactory<TProgram> factory,
         EfCoreStateTracker<TContext> stateTracker, 
-        ILogger<DeleteMethodIdempotencyProperty<TContext>> logger)
+        ILogger<DeleteMethodIdempotencyProperty<TContext, TProgram>> logger)
     {
         _factory = factory;
         _stateTracker = stateTracker;

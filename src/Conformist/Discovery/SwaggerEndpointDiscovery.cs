@@ -186,12 +186,25 @@ public class SwaggerEndpointDiscovery
             });
     }
 
+    private readonly HashSet<string> _visitedSchemas = new();
+    
     private SchemaInfo ParseSchema(OpenApiSchema? schema)
     {
         if (schema == null)
             return new SchemaInfo();
 
-        return new SchemaInfo
+        // Handle circular references
+        if (schema.Reference != null)
+        {
+            var refId = schema.Reference.Id ?? "";
+            if (_visitedSchemas.Contains(refId))
+            {
+                return new SchemaInfo { Reference = refId };
+            }
+            _visitedSchemas.Add(refId);
+        }
+
+        var result = new SchemaInfo
         {
             Type = schema.Type ?? "",
             Format = schema.Format ?? "",
@@ -212,6 +225,14 @@ public class SwaggerEndpointDiscovery
             AdditionalProperties = schema.AdditionalProperties != null,
             Reference = schema.Reference?.Id ?? ""
         };
+
+        // Remove from visited set after processing
+        if (schema.Reference != null)
+        {
+            _visitedSchemas.Remove(schema.Reference.Id ?? "");
+        }
+
+        return result;
     }
 
     private Dictionary<string, ExampleInfo> ParseExamples(IDictionary<string, OpenApiExample>? examples)
