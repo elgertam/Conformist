@@ -1,6 +1,9 @@
-# Conformist
+# Conformist - HTTP RFC Compliance Testing Library
 
-A comprehensive C# library for property-based testing of WebAPI endpoints for HTTP RFC compliance. This library automatically discovers endpoints, generates test data, and validates that your API conforms to HTTP standards.
+[![NuGet](https://img.shields.io/nuget/v/Conformist.HttpRfc.svg)](https://www.nuget.org/packages/Conformist.HttpRfc/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A comprehensive C# library for property-based testing of WebAPI endpoints for HTTP RFC compliance. Conformist automatically discovers your API endpoints and validates them against HTTP RFC standards, ensuring your APIs behave correctly according to web standards.
 
 ## Features
 
@@ -16,52 +19,53 @@ A comprehensive C# library for property-based testing of WebAPI endpoints for HT
 ### Installation
 
 ```bash
-dotnet add package Conformist
+dotnet add package Conformist.HttpRfc
 ```
 
 ### Basic Usage
 
 ```csharp
-using Conformist.HttpRfc.Core;
 using Conformist.HttpRfc.Extensions;
+using Microsoft.AspNetCore.Mvc.Testing;
 
-[HttpRfcProperty]
-public Property AllEndpointsComplyWithHttpRfc()
+[Test]
+public async Task TestApiForHttpRfcCompliance()
 {
-    return HttpRfcTester<MyDbContext, Program>
-        .ForApi(_factory)
-        .BuildAsync()
-        .Result
-        .CheckAllProperties();
+    using var factory = new WebApplicationFactory<Program>();
+    
+    var results = await factory.TestHttpRfcConformanceAsync<MyDbContext, Program>();
+    
+    var failedTests = results.Where(r => !r.OverallPassed);
+    Assert.That(failedTests, Is.Empty, "HTTP RFC violations detected");
 }
 ```
 
-### Advanced Configuration
+### Console Application
 
 ```csharp
-[HttpRfcProperty]
-public Property BlogApiConformance()
-{
-    return HttpRfcTester<BlogContext, Program>
-        .ForApi(_factory)
+using Conformist.HttpRfc.Extensions;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+using var factory = new WebApplicationFactory<Program>();
+
+var results = await factory.TestHttpRfcConformanceAsync<MyDbContext, Program>(
+    builder => builder
         .ConfigureStateTracking(opts => 
         {
-            opts.ExcludeEntity("AuditLog");
-            opts.TrackEntityChecksums = true;
-        })
-        .ExcludeEndpoints("/health", "/metrics")
-        .DefineBusinessRule(rule => rule
-            .ForEndpoint("/posts")
-            .WithMethod(HttpMethod.Post)
-            .Should(async (req, resp, db) => 
-            {
-                var newPost = await GetCreatedPost(resp, db);
-                return newPost.AuthorId == GetAuthenticatedUserId(req);
-            })
-            .Because("Created posts should belong to authenticated user"))
-        .BuildAsync()
-        .Result
-        .CheckAllProperties();
+            opts.ExcludeEntity<AuditLog>();
+            opts.TrackEntityCounts = true;
+        }),
+    maxRequestsPerEndpoint: 3);
+
+foreach (var failed in results.Where(r => !r.OverallPassed))
+{
+    Console.WriteLine($"❌ {failed.RequestMethod} {failed.RequestPath}");
+    
+    foreach (var violation in failed.PropertyResults.Where(pr => !pr.Passed))
+    {
+        Console.WriteLine($"   🔸 {violation.PropertyName}: {violation.FailureReason}");
+        Console.WriteLine($"     RFC: {violation.RfcReference}");
+    }
 }
 ```
 

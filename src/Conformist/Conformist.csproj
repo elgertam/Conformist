@@ -4,14 +4,37 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <PackageOutputPath>../../packages</PackageOutputPath>
+
+    <!-- NuGet Package Metadata -->
     <PackageId>Conformist</PackageId>
     <PackageVersion>1.0.0</PackageVersion>
-    <Authors>Conformist</Authors>
-    <Description>A comprehensive C# library for property-based testing of WebAPI endpoints for HTTP RFC compliance</Description>
-    <PackageTags>http;rfc;testing;property-based;webapi;aspnet;conformist</PackageTags>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>Andrew Mark Elgert</Authors>
+    <Company>Andrew Elgert Software, LLC</Company>
+    <Product>Conformist HTTP RFC Testing Library</Product>
+    <Description>A comprehensive C# library for property-based testing of WebAPI endpoints for HTTP RFC compliance. Automatically discovers API endpoints and validates them against HTTP RFC standards including safety, idempotency, and response consistency properties.</Description>
+    <PackageTags>http;rfc;testing;property-based;webapi;aspnet;conformist;api-testing;integration-testing;http-compliance</PackageTags>
+    <PackageProjectUrl>https://github.com/elgertam/conformist</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/elgertam/conformist</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release of Conformist HTTP RFC compliance testing library with automatic endpoint discovery, EF Core state tracking, and comprehensive HTTP property validation.</PackageReleaseNotes>
+    <Copyright>Copyright (c) 2024 Your Name</Copyright>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+
+    <!-- Source Link for debugging -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +52,31 @@
     <PackageReference Include="xunit" Version="2.4.2" />
     <PackageReference Include="xunit.extensibility.core" Version="2.4.2" />
     <PackageReference Include="NUnit" Version="3.14.0" />
+
+    <!-- Source Link support -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+
+    <!-- Exclude non-essential files from package -->
+    <Content Remove="../../Examples/**" />
+    <Content Remove="../../examples/**" />
+    <Content Remove="../../tests/**" />
+    <Content Remove="../../*.nix" />
+    <Content Remove="../../flake.*" />
+    <Content Remove="../../shell.nix" />
+    <Content Remove="../../*.sln" />
+    <Compile Remove="../../Examples/**" />
+    <Compile Remove="../../examples/**" />
+    <Compile Remove="../../tests/**" />
+    <None Remove="../../Examples/**" />
+    <None Remove="../../examples/**" />
+    <None Remove="../../tests/**" />
+    <None Remove="../../*.nix" />
+    <None Remove="../../flake.*" />
+    <None Remove="../../shell.nix" />
   </ItemGroup>
 
 </Project>
